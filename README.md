@@ -1,5 +1,13 @@
 # 🤖 Autonomous Support Resolution Agent
 
+## 🌐 Live Demo
+
+You can test the autonomous support agent here:
+
+👉 [Open Live App](https://nenavath-chandu--hackathon2026-nenavath-chandu-app-dhrl4h.streamlit.app/)
+
+Upload a tickets.json file and click "Run Autonomous" to see the agent in action.
+
 > **Hackathon Project** — A production-ready AI agent that reads customer support tickets, reasons about them autonomously, takes multi-step actions using real tools, and resolves or escalates — without any human in the loop.
 
 ---
