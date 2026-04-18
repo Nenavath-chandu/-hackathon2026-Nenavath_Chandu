@@ -2,17 +2,10 @@ import os
 import sys
 import json
 import time
-import asyncio
+import tempfile
+import subprocess
 import pandas as pd
 import streamlit as st
-
-# Add agent_system directory to Python path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "agent_system"))
-
-from agent_system.agent import SupportAgent
-from agent_system.config import agent_config
-from agent_system.logger import audit_logger
-
 
 # ==============================================================================
 # UI CONFIGURATION
@@ -29,41 +22,6 @@ Welcome to the Autonomous Support Agent Dashboard. This system uses a **ReAct-st
 to autonomously classify, process, and resolve or escalate customer support tickets.
 """)
 
-
-# ==============================================================================
-# ASYNC PROCESSING LOOP
-# ==============================================================================
-async def process_tickets_concurrently(tickets, progress_bar, status_text):
-    """Run all tickets concurrently and update progress."""
-    agent = SupportAgent()
-    semaphore = asyncio.Semaphore(agent_config.max_concurrent_tickets)
-    
-    # Optional context for live updates
-    completed = 0
-    total = len(tickets)
-    results = []
-
-    async def process_one(ticket):
-        nonlocal completed
-        async with semaphore:
-            # Process ticket using core logic
-            entry = await agent.process(ticket)
-            
-            # Update Progress (UI)
-            completed += 1
-            progress_bar.progress(completed / total)
-            status_text.text(f"Processed {completed} of {total} tickets...")
-            
-            return entry.to_dict()
-
-    # Create async tasks for all tickets
-    tasks = [asyncio.create_task(process_one(t)) for t in tickets]
-    
-    # Gather results
-    results = await asyncio.gather(*tasks)
-    return results
-
-
 # ==============================================================================
 # SIDEBAR / CONTROLS
 # ==============================================================================
@@ -71,17 +29,13 @@ with st.sidebar:
     st.header("⚙️ Configuration")
     failure_rate = st.slider(
         "Simulated Tool Failure Rate", 
-        min_value=0.0, max_value=1.0, value=agent_config.tool_failure_rate, step=0.05,
+        min_value=0.0, max_value=1.0, value=0.20, step=0.05,
         help="Simulates network/tool failures. The agent will attempt to retry and recover."
     )
     max_concurrent = st.slider(
         "Max Concurrent Tickets",
-        min_value=1, max_value=50, value=agent_config.max_concurrent_tickets, step=1
+        min_value=1, max_value=50, value=10, step=1
     )
-    
-    # Apply to singleton config
-    agent_config.tool_failure_rate = failure_rate
-    agent_config.max_concurrent_tickets = max_concurrent
 
 
 # ==============================================================================
@@ -111,81 +65,146 @@ if uploaded_file:
     
     if st.button("🚀 Run Autonomous Agent", use_container_width=True):
         
-        # UI Elements for progress
-        progress_bar = st.progress(0)
-        status_text = st.empty()
-        
         start_time = time.time()
         
-        # Run event loop to wrap asyncio code
-        with st.spinner("Agent is reasoning..."):
-            results = asyncio.run(process_tickets_concurrently(tickets, progress_bar, status_text))
+        # 1. Save uploaded file to a temporary file so subprocess can read it
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".json", mode='w', encoding='utf-8') as tmp_file:
+            json.dump(tickets, tmp_file)
+            tmp_file_path = tmp_file.name
+
+        # Prepare CLI command
+        cmd = [
+            sys.executable, "agent_system/main.py",
+            "--tickets", tmp_file_path,
+            "--max-concurrent", str(max_concurrent),
+            "--failure-rate", str(failure_rate)
+        ]
+
+        # 3. Setup Environment to force UTF-8 for Windows compatibility
+        env = os.environ.copy()
+        env["PYTHONIOENCODING"] = "utf-8"
+
+        # 4. Run agent system in subprocess and capture output
+        with st.spinner("🧠 Agent is reasoning... Please wait while it processes tickets."):
+            result = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", env=env)
             
         elapsed = time.time() - start_time
-        status_text.success(f"Execution completed in {elapsed:.2f} seconds!")
-        
-        # Ensure we always scope the summary to this exact run
-        # Wait, the audit_logger accumulates records natively, but we can compute stats from `results`
-        
-        # ==============================================================================
-        # METRICS & SUMMARY
-        # ==============================================================================
-        st.divider()
-        st.subheader("3. Final Summary & Results")
-        
-        total_processed = len(results)
-        resolved_count = sum(1 for r in results if r.get("status") == "resolved")
-        escalated_count = sum(1 for r in results if r.get("status") == "escalated")
-        failed_count = sum(1 for r in results if r.get("status") == "failed")
-        avg_confidence = (sum(r.get("confidence", 0) for r in results) / total_processed) if total_processed else 0
-        
-        col1, col2, col3, col4 = st.columns(4)
-        col1.metric("Total Tickets", total_processed)
-        col2.metric("✅ Resolved", resolved_count)
-        col3.metric("📤 Escalated", escalated_count)
-        col4.metric("🎯 Avg Confidence", f"{avg_confidence:.0%}")
-        
-        if failed_count > 0:
-            st.error(f"{failed_count} tickets encountered internal system errors/crashes.")
+
+        # Clean up temp file
+        try:
+            os.remove(tmp_file_path)
+        except OSError:
+            pass
+
+        # Try to read generated audit log to populate UI
+        audit_file_path = "agent_system/logs/audit_log.json"
+        if os.path.exists(audit_file_path):
+            with open(audit_file_path, "r", encoding="utf-8") as file:
+                full_audit_log = json.load(file)
+                results = full_audit_log[-len(tickets):] if len(full_audit_log) >= len(tickets) else full_audit_log
+        else:
+            results = []
 
         # ==============================================================================
-        # DATAFRAME VIEW
+        # DASHBOARD UI - IMPRESSIVE LAYOUT
         # ==============================================================================
-        st.markdown("### Per-Ticket Breakdown")
+        st.divider()
+        st.success(f"✨ Execution completed successfully in {elapsed:.2f} seconds!")
         
-        df_data = []
-        for r in results:
-            cls = r.get("classification", {})
-            df_data.append({
-                "Ticket ID": r.get("ticket_id"),
-                "Intent": cls.get("intent", "Unknown"),
-                "Status": r.get("status", "Unknown").upper(),
-                "Confidence": f"{r.get('confidence', 0):.0%}",
-                "Final Action": r.get("final_action", ""),
-                "Reason": r.get("reason", "")
-            })
-            
-        df = pd.DataFrame(df_data)
+        # Create Tabs for a cleaner user experience
+        tab_summary, tab_logs, tab_deep_dive = st.tabs([
+            "📊 Executive Summary", 
+            "💻 Execution Terminal", 
+            "🔍 Ticket Deep Dive"
+        ])
         
-        # Styling the dataframe for colors based on status
-        def style_status(val):
-            color = 'green' if val == 'RESOLVED' else 'orange' if val == 'ESCALATED' else 'red'
-            return f'color: {color}; font-weight: bold'
-            
-        styled_df = df.style.map(style_status, subset=['Status'])
-        st.dataframe(styled_df, use_container_width=True, hide_index=True)
-        
-        # ==============================================================================
-        # DETAILED LOG EXPANDERS
-        # ==============================================================================
-        st.markdown("### Detailed Reasoning Logs")
-        for r in results:
-            status_icon = "✅" if r.get("status") == "resolved" else "📤" if r.get("status") == "escalated" else "❌"
-            expander_title = f"{status_icon} Ticket {r.get('ticket_id')} — {r.get('classification', {}).get('intent', 'unknown')} ({r.get('confidence', 0):.0%} conf)"
-            
-            with st.expander(expander_title):
-                st.markdown(f"**Final Reason:** {r.get('reason')}")
-                st.markdown(f"**Tools Used:** `{', '.join(r.get('tools_used', []))}`")
+        # --- TAB 1: EXECUTIVE SUMMARY ---
+        with tab_summary:
+            if results:
+                total_processed = len(results)
+                resolved_count = sum(1 for r in results if r.get("status") == "resolved")
+                escalated_count = sum(1 for r in results if r.get("status") == "escalated")
+                failed_count = sum(1 for r in results if r.get("status") == "failed")
+                avg_confidence = (sum(r.get("confidence", 0) for r in results) / total_processed) if total_processed else 0
                 
-                # Show steps safely in a secondary expander or just write them nicely as json
-                st.json(r)
+                # Top-level metrics in a beautifully spaced container
+                st.markdown("### Agent Performance Metrics")
+                m1, m2, m3, m4 = st.columns(4)
+                m1.metric("Total Processed", total_processed, delta="Tickets")
+                m2.metric("✅ Autonomously Resolved", resolved_count, delta=f"{resolved_count/total_processed:.0%} automation", delta_color="normal")
+                m3.metric("📤 Escalated to Human", escalated_count, delta=f"{escalated_count/total_processed:.0%} routing", delta_color="inverse")
+                m4.metric("🎯 Average Confidence", f"{avg_confidence:.1%}")
+                
+                if failed_count > 0:
+                    st.error(f"⚠️ {failed_count} tickets encountered internal system errors/crashes.")
+
+                st.markdown("<br/>", unsafe_allow_html=True)
+                st.markdown("### Action Breakdown")
+                
+                # Build dataframe for summary
+                df_data = []
+                for r in results:
+                    cls = r.get("classification", {})
+                    df_data.append({
+                        "Ticket ID": r.get("ticket_id"),
+                        "Intent": str(cls.get("intent", "Unknown")).replace("_", " ").title(),
+                        "Status": r.get("status", "Unknown").upper(),
+                        "Confidence": f"{r.get('confidence', 0):.0%}",
+                        "Reason": r.get("reason", ""),
+                        "Tools Chained": len(r.get("tools_used", []))
+                    })
+                    
+                df = pd.DataFrame(df_data)
+                
+                # Styling the dataframe for colors based on status
+                def style_status(val):
+                    if val == 'RESOLVED':
+                        return 'color: #00fa9a; font-weight: bold; background-color: #00331a;'
+                    elif val == 'ESCALATED':
+                        return 'color: #ffa500; font-weight: bold; background-color: #332200;'
+                    return 'color: #ff4d4d; font-weight: bold; background-color: #330000;'
+                    
+                # We style the Status column to make it pop visually
+                styled_df = df.style.map(style_status, subset=['Status'])
+                st.dataframe(styled_df, use_container_width=True, hide_index=True)
+                
+            else:
+                st.warning("⚠️ Could not locate audit_log.json to generate metrics.")
+
+        # --- TAB 2: EXECUTION TERMINAL ---
+        with tab_logs:
+            st.markdown("### Raw Agent stdout / stderr")
+            if result.stderr:
+                st.error("Encountered errors during execution:")
+                st.code(result.stderr, language="bash")
+                
+            st.code(result.stdout, language="bash")
+
+        # --- TAB 3: TICKET DEEP DIVE ---
+        with tab_deep_dive:
+            if results:
+                st.markdown("### Individual Ticket Reasoning Chains")
+                for r in results:
+                    status = r.get("status")
+                    if status == "resolved":
+                        icon, color = "✅", "green"
+                    elif status == "escalated":
+                        icon, color = "📤", "orange"
+                    else:
+                        icon, color = "❌", "red"
+                        
+                    intent_name = str(r.get('classification', {}).get('intent', 'unknown')).replace("_", " ").title()
+                    conf_str = f"({r.get('confidence', 0):.0%} Confidence)"
+                    
+                    # Colored expandable header
+                    expander_title = f"{icon} {r.get('ticket_id')} — {intent_name} {conf_str}"
+                    
+                    with st.expander(expander_title):
+                        st.markdown(f"**Outcome Reason:** _{r.get('reason')}_")
+                        tools = r.get('tools_used', [])
+                        if tools:
+                            st.markdown("**Tools Executed:** " + " ➔ ".join([f"`{t}`" for t in tools]))
+                        st.divider()
+                        st.json(r)
+            else:
+                st.info("No deep dive data available.")
