@@ -1,0 +1,2 @@
+# Audit logs are written here at runtime by logger.py
+# This file exists to ensure the directory is tracked by version control.

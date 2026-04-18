@@ -1,0 +1,103 @@
+[
+  {
+    "ticket_id": "TKT-2001",
+    "customer_email": "alice@example.com",
+    "customer_name": "Alice Chen",
+    "order_id": "ORD-1001",
+    "product_id": "PRD-55",
+    "subject": "I want a refund for my headphones",
+    "description": "Hi, I received my wireless noise-cancelling headphones last week but they stopped working after 2 days. The right earcup has no sound at all. I would like a full refund please. This is really frustrating.",
+    "channel": "email",
+    "created_at": "2026-04-18T08:00:00Z"
+  },
+  {
+    "ticket_id": "TKT-2002",
+    "customer_email": "bob@example.com",
+    "customer_name": "Bob Martinez",
+    "order_id": "ORD-1002",
+    "subject": "Where is my order? It's been 5 days",
+    "description": "I placed an order 5 days ago and it still hasn't arrived. When will it be delivered? The tracking page says 'in transit' but nothing has changed. This is very urgent for me.",
+    "channel": "chat",
+    "created_at": "2026-04-18T08:15:00Z"
+  },
+  {
+    "ticket_id": "TKT-2003",
+    "customer_email": "carol@example.com",
+    "customer_name": "Carol Smith",
+    "order_id": "ORD-1003",
+    "subject": "Refund for cancelled smart home hub order",
+    "description": "My order ORD-1003 for the Smart Home Hub was cancelled. I was charged $299 and I need my money back immediately. This is unacceptable. Please process this refund ASAP.",
+    "channel": "email",
+    "created_at": "2026-04-18T08:30:00Z"
+  },
+  {
+    "ticket_id": "TKT-2004",
+    "customer_email": "dave@example.com",
+    "customer_name": "Dave Johnson",
+    "order_id": "ORD-1004",
+    "product_id": "PRD-88",
+    "subject": "Yoga mat is not what I expected",
+    "description": "I bought a Yoga Mat Pro 3 weeks ago. The mat started peeling after the first use which is completely unacceptable for this price. I want to return it and get a refund.",
+    "channel": "email",
+    "created_at": "2026-04-18T08:45:00Z"
+  },
+  {
+    "ticket_id": "TKT-2005",
+    "customer_email": "eve@example.com",
+    "customer_name": "Eve Williams",
+    "order_id": "ORD-1005",
+    "product_id": "PRD-33",
+    "subject": "Office chair assembly instructions broken link",
+    "description": "I received my Ergonomic Office Chair and the assembly guide link in the box is broken. I cannot figure out how to attach the armrests. Can you help me with setup instructions?",
+    "channel": "email",
+    "created_at": "2026-04-18T09:00:00Z"
+  },
+  {
+    "ticket_id": "TKT-2006",
+    "customer_email": "alice@example.com",
+    "customer_name": "Alice Chen",
+    "subject": "Cannot login to my account - password reset not working",
+    "description": "I have been trying to reset my password for the past hour. I click the reset link in the email and it says 'link expired'. I've tried 5 times now. I cannot access my account at all. Please fix this issue urgently.",
+    "channel": "chat",
+    "created_at": "2026-04-18T09:15:00Z"
+  },
+  {
+    "ticket_id": "TKT-2007",
+    "customer_email": "bob@example.com",
+    "customer_name": "Bob Martinez",
+    "product_id": "PRD-21",
+    "subject": "Smart Home Hub setup - device not connecting to WiFi",
+    "description": "I purchased the Smart Home Hub and I cannot get it to connect to my WiFi network. I've reset it three times and followed the app instructions but it keeps showing an error. Device firmware might need an update?",
+    "channel": "email",
+    "created_at": "2026-04-18T09:30:00Z"
+  },
+  {
+    "ticket_id": "TKT-2008",
+    "customer_email": "carol@example.com",
+    "customer_name": "Carol Smith",
+    "subject": "I am absolutely furious - terrible customer service and fraud",
+    "description": "This is the worst company I have ever dealt with. I was charged twice for the same order. This is fraud. I want an immediate refund for the duplicate charge and I'm considering filing a complaint with consumer protection agencies. This is unacceptable and I will never use your service again.",
+    "channel": "email",
+    "created_at": "2026-04-18T09:45:00Z"
+  },
+  {
+    "ticket_id": "TKT-2009",
+    "customer_email": "dave@example.com",
+    "customer_name": "Dave Johnson",
+    "product_id": "PRD-77",
+    "subject": "Is the leather wallet available in brown color?",
+    "description": "Hi, I'm interested in your Premium Leather Wallet. I saw it comes in black on the website. Do you have it in brown or tan? Also what are the dimensions? I want to make sure it fits in my slim jeans pocket.",
+    "channel": "chat",
+    "created_at": "2026-04-18T10:00:00Z"
+  },
+  {
+  "ticket_id": "TKT-9999",
+  "customer_email": "test@example.com",
+  "customer_name": "Test User",
+  "order_id": null,
+  "subject": "I want refund but no order id",
+  "description": "I want refund but I don't remember my order id. Please help.",
+  "channel": "email",
+  "created_at": "2026-04-18T10:00:00Z"
+}
+]
