@@ -8,6 +8,15 @@ You can test the autonomous support agent here:
 
 Upload a tickets.json file and click "Run Autonomous" to see the agent in action.
 
+## 🎥 Demo Video
+
+A short demo showing:
+- Autonomous ticket processing
+- ReAct reasoning (Think → Act → Reflect)
+- Tool chaining and failure handling
+
+👉 [Watch Demo Video](https://youtu.be/XlrYmM6pUY8)
+
 > **Hackathon Project** — A production-ready AI agent that reads customer support tickets, reasons about them autonomously, takes multi-step actions using real tools, and resolves or escalates — without any human in the loop.
 
 ---
